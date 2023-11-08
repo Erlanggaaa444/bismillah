@@ -20,10 +20,30 @@ void setup() {
 }
 
 void loop() {
-  // Baca keypad
+  // Baca input keypad
   readKp4x4();
+
+  // Perbaharui menu
+
+  /*
+  jike menu = 1
+    jalankan menu 1
+
+  jika menu = 2
+    jalankan menu 2
+  
+  jika menu = 3
+    jalankan menu 3
+  
+  jika menu = 4
+    jalankan menu 4
+  */
+
+
+
 }
 
+// fungsi membaca input keypad
 void readKp4x4() { 
   // baca input keypad
   char customKey = kp4x4.getKey();
@@ -31,3 +51,14 @@ void readKp4x4() {
       Serial.println(customKey);
   }
 }
+
+
+// fungsi perbaharui menu
+
+
+
+// fungsi menu (tergantung pada menu yang dipilih terdapat aksi: set timer, menyalakan relay, reset)
+
+
+
+
