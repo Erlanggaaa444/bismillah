@@ -111,6 +111,7 @@ void listenmode_2() {
       lcd.setCursor(1, 1);
       lcd.print("Timer set to ");
       lcd.print(timerValue);
+      delay(1000);
       
       // Start the timer
       myTimer.in(timerValue * 1000, timerCallback);
