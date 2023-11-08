@@ -1,4 +1,6 @@
 // Deklarasi penggunaan library
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 
 // Deklarasi dimensi keypad (baris dan kolom)
@@ -13,10 +15,27 @@ byte colKp4x4Pin [4] = {5, 4, 3, 2};
 // Deklarasi keypad
 Keypad kp4x4  = Keypad(makeKeymap(kp4x4Keys), rowKp4x4Pin, colKp4x4Pin, ROWS, COLS);
 
+// Deklarasi LCD
+LiquidCrystal_I2C lcd(0x27,20,4); 
+
+// Deklarasi variable
+String input_value;
+long int timer = 0;
+
+// Deklarasi pin 
+int relay_pin = A0;
+
 void setup() {
   // Inisialisasi serial monitor
   Serial.begin(9600);
   Serial.println(F("Initialize System"));
+
+  // Inisialisasi LCD
+  lcd.init();                      
+  lcd.init();
+
+  // Inisialisasi pinMode
+  pinMode(relay_pin, OUTPUT);
 }
 
 void loop() {
