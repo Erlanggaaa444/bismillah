@@ -1,17 +1,21 @@
-// Deklarasi penggunaan library
+// Deklarasi library
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <arduino-timer.h>
 
 // Deklarasi LCD
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // Deklarasi variabel
 String input_value;
-long timer = 0;
+long timerValue = 0;
 int sensor_value = 50;
+int mode = 1;
+int last_mode;
 
-// Deklarasi pin
-// int relay_pin = A0;
+// Create a timer object
+Timer<10, millis> myTimer;
+
 
 void setup() {
   // Inisialisasi serial monitor
@@ -29,54 +33,97 @@ void setup() {
 }
 
 void loop() {
+  // perbaharui nilai pembacaan sensor
+
+  // cek mode
+  checkmode(mode);
+
+  // Update the timer
+  myTimer.tick();
+
+}
+
+
+void checkmode(int mode) {
+  if (last_mode != mode) {
+    lcd.clear();
+  }
+  if (mode == 0) {
+    display_pilih_mode();
+    listenmode_0();
+  }  else if (mode == 1) {
+    display_main_sensor(sensor_value, input_value.charAt(0));
+    listenmode_1();
+  } else if (mode == 2) {
+    display_main_timer(sensor_value, input_value.charAt(0));
+    listenmode_1();
+  } else if (mode == 3) {
+    display_set_timer();
+    listenmode_2();
+  }
+  last_mode = mode;
+}
+
+void listenmode_0() {
   // Baca input serial monitor
   if (Serial.available() > 0) {
     char input_value = Serial.read();
     Serial.println(input_value);
 
     if (input_value == '1') {
-      display_main_timer(sensor_value, input_value);
+      mode = 1;
     } else if (input_value == '2') {
-      display_2(sensor_value, input_value);
-    } else if (input_value == '3') {
-      display_3();
-    } else if (input_value == '4') {
-      display_4();
-    } else if (input_value == '5') {
-      display_5();
+      mode = 3;
     }
   }
+}
+
+void listenmode_1() {
+  // Baca input serial monitor
+  if (Serial.available() > 0) {
+    char input_value = Serial.read();
+    Serial.println(input_value);
+
+    if (input_value == '0') {
+      display_pilih_mode();
+      mode = 0;
+    }
+  }
+}
 
 
+void listenmode_2() {
+  // Baca input serial monitor
+  static String input_value = "";
+  if (Serial.available() > 0) {
+    char c = Serial.read();
+    Serial.print(c);
+    
+    if (isdigit(c)) {
+      input_value += c;
+    } else if (c == '\n' && input_value.length() > 0) {
+      timerValue = input_value.toInt();
+      input_value = "";
+      Serial.print("Timer value: ");
+      Serial.println(timerValue);
 
-// Perbaharui menu
-
-
-/*
-  jike menu = 1
-  jalankan menu 1
-
-  jika menu = 2
-  jalankan menu 2
-
-  jika menu = 3
-  jalankan menu 3
-
-  jika menu = 4
-  jalankan menu 4
-*/
-
-
-
+      lcd.clear();
+      lcd.setCursor(1, 1);
+      lcd.print("Timer set to ");
+      lcd.print(timerValue);
+      
+      // Start the timer
+      myTimer.in(timerValue * 1000, timerCallback);
+      mode = 2;
+    }
+  }
 }
 
 
 void display_main_timer(int sensor_value, char input_value) {
-  lcd.clear();
-
   // line 1
   lcd.setCursor(1, 0);
-  lcd.print(String("Mode :Timer ") + input_value + String("Min"));
+  lcd.print(String("Mode :Timer ") + input_value + String(" Min"));
 
   // line 2
   lcd.setCursor(1, 1);
@@ -87,12 +134,10 @@ void display_main_timer(int sensor_value, char input_value) {
   lcd.print("0=Pilih Mode");
 }
 
-void display_2(int sensor_value, char input_value) {
-  lcd.clear();
-
+void display_main_sensor(int sensor_value, char input_value) {
   // line 1
   lcd.setCursor(1, 0);
-  lcd.print(String("Mode :Sensor ") + input_value + String("Min"));
+  lcd.print("Mode :Sensor");
 
   // line 2
   lcd.setCursor(1, 1);
@@ -103,31 +148,25 @@ void display_2(int sensor_value, char input_value) {
   lcd.print("0=Pilih Mode");
 }
 
-void display_3() {
-  lcd.clear();
-
+void display_inisialisasi() {
   // line 2
   lcd.setCursor(1, 1);
   lcd.print("Inisialisasi ... ");
 
 }
 
-void display_4() {
-  lcd.clear();
-
+void display_pilih_mode() {
   // line 2
   lcd.setCursor(1, 1);
   lcd.print("Pilih Mode");
 
   // line 3
   lcd.setCursor(1, 2);
-  lcd.print("1=Timer   2=Sensor");
+  lcd.print("1=Sensor   2=Timer");
 
 }
 
-void display_5() {
-  lcd.clear();
-
+void display_set_timer() {
   // line 2
   lcd.setCursor(1, 1);
   lcd.print("Set Timer ...Mins");
@@ -138,12 +177,8 @@ void display_5() {
 
 }
 
-// fungsi perbaharui menu
-
-
-
-// fungsi menu (tergantung pada menu yang dipilih terdapat aksi: set timer, menyalakan relay, reset)
-
-
-
-
+// Timer callback
+bool timerCallback(void* opaque) {
+  Serial.println("Timer expired!");
+  return true; // Repeat the timer
+}
