@@ -8,25 +8,25 @@ void setup() {
 
 void loop() {
   // check interrupt
-  checkInterrupt();
+  checkInterrupt(); /// intterupt handler
   
   // check countdown
-  checkCountdown();
+  checkCountdown(); // time tracking
  
- // print message
-  printmessage();
+  // print message
+  printmessage(); // action 
   
-
+  
   
 }
 
 void printMessageWithInterrupt() {
   for (int i = 0; i < 5; i++) {
     if (isCountingDown) {
+      Serial.println("Printing message...");
+      delay(1000);
       return;
     }
-    Serial.println("Printing message...");
-    delay(1000);
   }
 }
 
