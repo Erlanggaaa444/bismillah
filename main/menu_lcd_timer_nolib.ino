@@ -44,6 +44,9 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 // deklarasi variabel
 int mode = 0;
 float sensor_value = 20.0f;
+const int pinSensor = A0; 
+const int relay = 7;  
+    
 
 void setup()
 {
@@ -53,6 +56,8 @@ void setup()
     // Inisialisasi LCD
     lcd.init();
     lcd.backlight();
+
+    pinMode(pinSensor, INPUT);   
 }
 
 void loop()
@@ -94,6 +99,16 @@ void tickTimer()
     }
 }
 
+void sensor_kelembapan()
+{
+    int sensorValue = analogRead(pinSensor); 
+    float voltage = sensorValue * (5.0 / 1023.0);
+    float kelembapan = (voltage - 0.8) * 100.0 / (3.0 - 0.8);
+    sensor_value = kelembapan;
+    Serial.println(sensor_value);
+}
+
+
 void checkmode(int mode)
 {
     switch (mode)
@@ -104,15 +119,16 @@ void checkmode(int mode)
         listenmode0();
         break;
     case 1: // mode sensor
+        sensor_kelembapan();
         display_main_sensor(sensor_value);
         listenmode1();
         break;
-    case 2: //
+    case 2: // mode timer
         tickTimer();
         display_main_timer(sensor_value);
         listenmode2();
         break;
-    case 3: //
+    case 3: // Set timer elapse
         display_set_timer();
         listenmode3();
         break;
