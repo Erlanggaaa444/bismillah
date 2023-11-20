@@ -93,18 +93,34 @@ class Timer
 
 // Deklarasi library
 #include <Wire.h>
+#include <Keypad.h>
 #include <LiquidCrystal_I2C.h>
 
 // deklarasi variabel
 int pins[8] = {30, 32, 34, 36, 38, 40, 42, 44}; // Change these to your desired pins
+const byte ROW_NUM = 4; //four rows
+const byte COL_NUM = 4; //four columns
 int mode = 0;
+String savedString, inputString, input_value;
 float sensor_value = 20.0f;
 uint8_t state = 0b00000001; // Initial state
+byte pin_rows[ROW_NUM] = {39, 41, 43, 45}; //connect to the row pinouts of the keypad
+byte pin_column[COL_NUM] = {31, 33, 35, 37}; //connect to the column pinouts of the keypad
+char keys[ROW_NUM][COL_NUM] = {
+  {'1','2','3', 'A'},
+  {'4','5','6', 'B'},
+  {'7','8','9', 'C'},
+  {'*','0','#', 'D'}
+};
+
 
 // Deklarasi kelas
 Timer timer;
 RelayModule relay(pins);
 LiquidCrystal_I2C lcd(0x27, 20, 4);
+Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COL_NUM); 
+
+
 
 void setup()
 {
@@ -133,14 +149,44 @@ void loop()
 
 char readInput()
 {
-  if (Serial.available() > 0)
+  char key = keypad.getKey();
+  if (key)
   {
-    char key = Serial.read();
+    Serial.println(key);
     return key;
   } else {
     return 0;
   }
 }
+
+int readKp4x4() { 
+    while (true) {
+        // Read input from the keypad
+        char customKey = keypad.getKey();
+        if (customKey) {
+            // If the key is '#', save the input string and clear it
+            if (customKey == '#') {
+                savedString = inputString;
+                Serial.print("savedString = "); Serial.println(savedString);
+                inputString = "";
+                int number = savedString.toInt();
+                return number;
+            } 
+            // If the key is 'C', remove the last character from the input string
+            else if (customKey == 'C') {
+                if (inputString.length() > 0) {
+                    inputString.remove(inputString.length() - 1);
+                }
+            } 
+            else {
+                // Otherwise, append the key to the input string
+                inputString += customKey;
+            }
+            Serial.println(savedString);
+        }
+    }
+}
+
 
 void checkInterrupt()
 {
@@ -250,24 +296,15 @@ void listenmode2()
 void listenmode3()
 {
   Serial.println("input timer elapse time");
-  while (true)
+  readKp4x4(); // Read input from the keypad
+  int input = savedString.toInt(); // Convert the saved string to an integer
+  if (input > 0)
   {
-    if (Serial.available() > 0)
-    {
-      String str = Serial.readString();
-      float input = str.toFloat();
-      Serial.println(input);
-      if (input > 0)
-      {
-        float timeSet = input;
-        timer.setElapsedTime(timeSet);
-        Serial.print("timer is set to : ");
-        Serial.println(timeSet);
-        lcd.clear();
-        mode = 2;
-        break;
-      }
-    }
+    timer.setElapsedTime(input);
+    Serial.print("timer is set to : ");
+    Serial.println(input);
+    lcd.clear();
+    mode = 2;
   }
 }
 
