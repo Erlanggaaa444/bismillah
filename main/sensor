@@ -1,0 +1,35 @@
+const int pinSensor = A0; 
+const int relay = 7;      
+const int ledRed = 6;    
+const int ledGreen = 5;     
+
+void setup() {
+Serial.begin (9600);          
+pinMode(pinSensor, INPUT);   
+pinMode(relay, OUTPUT);       
+pinMode(ledGreen, OUTPUT);    
+pinMode(ledRed, OUTPUT);     
+}
+
+void loop() {
+int dataAnalog = analogRead (pinSensor);
+Serial.print ("A0 : ");
+Serial.print (dataAnalog);
+
+
+if (dataAnalog < 500) { 
+  Serial.println("Tanah masih basah"); 
+  digitalWrite (ledGreen, HIGH);
+  digitalWrite (ledRed, LOW);
+  digitalWrite (relay, LOW);
+  }
+
+ else {
+  Serial.println("tanah kering, nyalakan pompa"); 
+  digitalWrite (ledGreen, LOW);
+  digitalWrite (ledRed, HIGH);
+  digitalWrite (relay, HIGH);
+  }
+
+ delay (500);
+}
