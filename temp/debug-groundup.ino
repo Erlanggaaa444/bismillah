@@ -125,9 +125,12 @@ class Timer
 };
 
 
+// deklarasi variabel global
+int mode = 0;
+float sensor_value = 20;
+
 // deklarasi pin relay
 int pins[8] = {30, 32, 34, 36, 38, 40, 42, 44}; // Change these to your desired pins RELAY
-
 
 // dekllarasi pin sensor
 const int pinSensorAnalog = A0;
@@ -149,12 +152,13 @@ char hexaKeys[ROWS][COLS] = {
 byte rowPins[ROWS] = {39, 41, 43, 45}; 
 byte colPins[COLS] = {31, 33, 35, 37}; 
 
-// buat instance keypad
+// buat instance 
 Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 RelayModule relay(pins);
 Timer timer;
 
+void checkmode();
 
 void setup(){
   // inisialisasi serial monitor dan lcd
@@ -174,15 +178,95 @@ void setup(){
 }
 
 void loop(){
-  char customKey = readKeypad();
+  checkInterrupt();
 
-  if (customKey){
-    Serial.println(customKey);
-  }
+    checkmode(mode);
 }
 
 char readKeypad() 
 {
   char customKey = customKeypad.getKey();
   return customKey;
+}
+
+void checkInterrupt () {
+  char customKey = readKeypad();
+  if (customKey) {
+    Serial.println(customKey);
+    mode = customKey - '0';
+  }
+
+}
+
+void checkmode(int currentMode)
+{
+  switch (currentMode)
+  {
+    case 1:
+      display_pilih_relay();
+      break;
+    case 2:
+      display_set_timer(sensor_value);
+      break;
+    case 3:
+      display_main_countdown(sensor_value);
+      break;
+  }
+}
+
+
+
+// deklarasi fungsi display lcd
+
+void display_pilih_relay()
+{
+  // display lcd
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Pilih Relay");
+  lcd.setCursor(0, 1);
+  lcd.print("1. Relay 1");
+  lcd.setCursor(0, 2);
+  lcd.print("2. Relay 2");
+  lcd.setCursor(0, 3);
+  lcd.print("3. Relay 3");
+
+  Serial.println("Pilih Relay");
+}
+
+
+void display_set_timer(int sensor_value)
+{
+  // display lcd
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Set Timer");
+  lcd.setCursor(0, 1);
+  lcd.print("Sensor : ");
+  lcd.print(sensor_value);
+  lcd.print(" %");
+  lcd.setCursor(0, 2);
+  lcd.print("Timer : ");
+  lcd.print(timer.getCountdownTime());
+  lcd.print(" s");
+
+  Serial.println("Set Timer");
+}
+
+void display_main_countdown(int sensor_value)
+{
+  // display lcd
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Countdown");
+  lcd.setCursor(0, 1);
+  lcd.print("Sensor : ");
+  lcd.print(sensor_value);
+  lcd.print(" %");
+  lcd.setCursor(0, 2);
+  lcd.print("Timer : ");
+  lcd.print(timer.getCountdownTime());
+  lcd.print(" s");
+
+  Serial.println("Main Menu");
 }

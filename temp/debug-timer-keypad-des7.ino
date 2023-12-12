@@ -1,0 +1,419 @@
+/*
+  task :
+  - tambahkan placeholder output untuk mode timer
+  - tambahkan mode sensor
+*/
+
+// Deklarasi kelas modul relay
+class RelayModule
+{
+  private:
+    int relayPins[8];
+
+  public:
+    RelayModule(int pins[8])
+    {
+      for (int i = 0; i < 8; i++)
+      {
+        relayPins[i] = pins[i];
+        pinMode(relayPins[i], OUTPUT);
+      }
+    }
+
+    void turnOn(int channel)
+    {
+      digitalWrite(relayPins[channel - 1], HIGH);
+    }
+
+    void turnOff(int channel)
+    {
+      digitalWrite(relayPins[channel - 1], LOW);
+    }
+
+    void turnAllOn()
+    {
+      for (int i = 0; i < 8; i++)
+      {
+        digitalWrite(relayPins[i], HIGH);
+      }
+    }
+
+    void turnAllOff()
+    {
+      for (int i = 0; i < 8; i++)
+      {
+        digitalWrite(relayPins[i], LOW);
+      }
+    }
+
+    void turnOnSpecific(int index)
+    {
+      if (index >= 0 && index < 8)
+      {
+        digitalWrite(relayPins[index], HIGH);
+      }
+    }
+
+    void turnOffSpecific(int index)
+    {
+      if (index >= 0 && index < 8)
+      {
+        digitalWrite(relayPins[index], LOW);
+      }
+    }
+
+    void turnOnConsecutively(int interval)
+    {
+      for (int i = 0; i < 8; i++)
+      {
+        digitalWrite(relayPins[i], HIGH);
+        delay(interval);
+        digitalWrite(relayPins[i], LOW);
+      }
+    }
+
+    void setRelayState(int state)
+    {
+      for (int i = 0; i < 8; i++)
+      {
+        digitalWrite(relayPins[i], (state >> i) & 1 ? HIGH : LOW);
+      }
+    }
+
+
+};
+
+// delkarasikan kelas timer
+class Timer
+{
+  private:
+    unsigned long previousMillis;
+    unsigned long startTime; 
+    float elapsedTime;
+    float countdownTime; 
+  public:
+    Timer() : previousMillis(0), elapsedTime(0), countdownTime(0) {}
+
+    void startCountdown() {
+      startTime = millis(); // Initialize startTime when you start the countdown
+      previousMillis = startTime;
+    }
+
+
+    void setElapsedTime(float input)
+    {
+      elapsedTime = input * 60 * 1000;
+      countdownTime = elapsedTime; // Update the countdown time when elapsedTime is set
+    }
+
+    bool hasTicked()
+    {
+      if (elapsedTime > 0 && millis() - previousMillis >= elapsedTime)
+      {
+        previousMillis = millis();
+        countdownTime -= elapsedTime; // Decrease the countdown time
+
+        if (countdownTime <= 0) // If countdown time is down to 0
+        {
+          countdownTime = elapsedTime; // Reset it to the last set elapsed time
+        }
+
+        return true;
+      }
+      return false;
+    }
+
+    long getCountdownTime() {
+      long currentTime = millis(); // Get the current time
+      long elapsedTime = currentTime - startTime; // Calculate the elapsed time
+      long remainingTime = countdownTime - elapsedTime; // Calculate the remaining time
+
+      if (remainingTime < 0) { // If the countdown is over
+        remainingTime = 0; // Set remaining time to 0
+      }
+
+      return remainingTime;
+    }
+};
+
+
+
+
+
+// Deklarasi library
+#include <Wire.h>
+#include <Keypad.h>
+#include <LiquidCrystal_I2C.h>
+
+// deklarasi variabel
+int pins[8] = {30, 32, 34, 36, 38, 40, 42, 44}; // Change these to your desired pins RELAY
+const byte ROW_NUM = 4; //four rows
+const byte COL_NUM = 4; //four columns
+int mode = 0, selectedRelay = -1, timerValue = 0;
+String savedString, inputString, input_value;
+float sensor_value = 20.0f;
+unsigned long previousMillis = 0;
+const int pinSensor = A0;
+uint8_t state = 0b00000001; // Initial state
+byte pin_rows[ROW_NUM] = {39, 41, 43, 45}; //connect to the row pinouts of the keypad
+byte pin_column[COL_NUM] = {31, 33, 35, 37}; //connect to the column pinouts of the keypad
+char keys[ROW_NUM][COL_NUM] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+
+
+// Deklarasi kelas
+Timer timer;
+RelayModule relay(pins);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+Keypad customKeypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COL_NUM);
+
+
+
+void setup()
+{
+  // inisialisasi serial
+  Serial.begin(115200);
+
+  // Inisialisasi LCD
+  lcd.init();
+  lcd.backlight();
+
+  // set pinmode output
+  for (int i = 30; i <= 44; i += 2)
+  {
+    pinMode(i, OUTPUT);
+  }
+
+  // set pin sensor input
+  pinMode(pinSensor, INPUT);
+
+  // inisialisasi nilai
+  previousMillis = millis();
+}
+
+void loop () {
+  checkInterrupt();
+  checkmode(mode);
+}
+
+void checkmode(int mode)
+{
+  switch (mode)
+  {
+      sensor_kelembapan();
+    case 0: // init state pilih relay yang akan dikontrol
+      display_pilih_relay();
+      listenmode0();
+      break;
+    case 1: // set threshold
+      display_set_timer(sensor_value);
+      listenmode1();
+      break;
+    case 2: // execute watering based on threshold
+      tickTimer();
+      display_main_countdown(sensor_value);
+      listenmode2(selectedRelay);
+      break;
+  }
+}
+
+
+char checkInterrupt() {
+  char input = customKeypad.getKey();
+
+  if (input) {
+    if (input == '*') { // If '*' key is pressed
+      mode = 0;
+    }
+    Serial.println(input);
+    return input;
+  }
+}
+
+
+char readInput() {
+  char input = '\0';
+
+  while (true) {
+    if (Serial.available()) {
+      input = Serial.read();
+      if (input != '\n') { // Ignore newline character
+        break;
+      }
+    }
+
+    char key = customKeypad.getKey();
+    if (key) {
+      input = key;
+      break;
+    }
+  }
+
+  return input;
+}
+
+
+void sensor_kelembapan()
+{
+  int sensorValue = analogRead(pinSensor);
+  float voltage = sensorValue * (5.0 / 1023.0);
+  float kelembapan = (voltage - 0.8) * 100.0 / (3.0 - 0.8);
+  sensor_value = sensorValue;
+}
+
+
+
+int readKp4x4() {
+  while (true) {
+    // Read input from the keypad
+    char customKey = customKeypad.getKey();
+    if (customKey) {
+      // If the key is '#', save the input string and clear it
+      if (customKey == '#') {
+        savedString = inputString;
+        Serial.print("savedString = "); Serial.println(savedString);
+        inputString = "";
+        int number = savedString.toInt();
+        return number;
+      }
+      // If the key is 'C', remove the last character from the input string
+      else if (customKey == 'C') {
+        if (inputString.length() > 0) {
+          inputString.remove(inputString.length() - 1);
+          lcd.clear();
+          timer.startCountdown();
+          mode = 2;
+        }
+      }
+      else {
+        // Otherwise, append the key to the input string
+        inputString += customKey;
+        lcd.setCursor(8, 2);
+        lcd.print(inputString);
+      }
+      Serial.println(savedString);
+    }
+  }
+}
+
+void tickTimer()
+{
+    // Turn on the selected relay when the timer starts
+    if (timer.hasTicked())
+    {
+      relay.turnOnSpecific(selectedRelay);
+    }
+
+    // Turn off the selected relay when the timer ends
+    else if (timer.getCountdownTime() <= 0)
+    {
+      relay.turnOffSpecific(selectedRelay);
+    }
+}
+
+
+void display_pilih_relay()
+{
+  // display lcd
+  lcd.setCursor(0, 0);
+  lcd.print("Pilih Relay");
+  lcd.setCursor(0, 1);
+  lcd.print("1. Relay 1");
+  lcd.setCursor(0, 2);
+  lcd.print("2. Relay 2");
+  lcd.setCursor(0, 3);
+  lcd.print("3. Relay 3");
+
+  // display serial
+  Serial.println("Pilih Relay : (1/2/3)");
+}
+
+
+void display_set_timer(int sensor_value)
+{
+  // display lcd
+  lcd.setCursor(0, 0);
+  lcd.print("Set Timer");
+  lcd.setCursor(0, 1);
+  lcd.print("Sensor : ");
+  lcd.print(sensor_value);
+  lcd.print(" %");
+  lcd.setCursor(0, 2);
+  lcd.print("Timer : ");
+  lcd.setCursor(16, 2);
+  lcd.print("mins");
+
+
+  // display serial
+  Serial.println("Set Timer : (in mins)");
+  Serial.print("Timer is set to ");
+  Serial.print(timerValue);
+  Serial.println("Timer is set to ");
+}
+
+void display_main_countdown(int sensor_value)
+{
+  // display lcd
+  lcd.setCursor(0, 0);
+  lcd.print("Countdown");
+  lcd.setCursor(0, 1);
+  lcd.print("Sensor : ");
+  lcd.print(sensor_value);
+  lcd.print(" %");
+  lcd.setCursor(0, 2);
+  lcd.print("Timer : ");
+  lcd.print(timer.getCountdownTime());
+  lcd.print(" s");
+
+  // display serial
+  Serial.print("Countdown Timer : ");
+  Serial.print(timer.getCountdownTime());
+  Serial.print(" s | Moist : ");
+  Serial.println(sensor_value);
+}
+
+void listenmode0()
+{
+  char input = readInput();
+  if (input != '\0') // Check if the character is not null
+  {
+    if (isdigit(input)) // Check if the character is a digit
+    {
+      selectedRelay = input - '0'; // Convert char to int
+      Serial.print("Relay "); Serial.print(selectedRelay); Serial.println(" dipilih");
+      lcd.clear();
+      mode = 1;
+    }
+  }
+}
+
+
+void listenmode1()
+
+{
+  timerValue = readKp4x4();
+  lcd.clear();
+  mode = 2;
+}
+
+
+void listenmode2(int relayChoice)
+{
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= timerValue)
+  {
+    // save the last time the relay was toggled
+    previousMillis = currentMillis;
+
+    // if the relay is off turn it on and vice-versa
+    if (digitalRead(pins[relayChoice]) == LOW)
+    {
+      digitalWrite(pins[relayChoice], HIGH);
+    }
+  }
+}
