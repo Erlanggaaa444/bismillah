@@ -112,7 +112,7 @@ uint8_t state = 0b00000001; // Initial state
 String savedString, inputString, input_value;
 
 // deklarasi variabel int
-int sensor_value = 20.0f, mapped_value = 0, moist_value = 0, low_moist = 0, high_moist = 0, moist_threshold = 0, thresholdValue = 0, elapseValue = 1;
+int sensor_value = 20.0, mapped_value = 0, moist_value = 0, low_moist = 0, high_moist = 0, moist_threshold = 0, thresholdValue = 0, elapseValue = 1;
 
 // deklarasi variabel long
 unsigned long previousMillis = 0;
@@ -173,7 +173,7 @@ void checkmode(int mode)
       listenmode0_high_moist();
       break;
     case 2:
-    display_set_threshold(mapped_value);
+      display_set_threshold(mapped_value);
       listenmode1_threshold();
       break;
     case 3:
@@ -236,9 +236,9 @@ void display_set_threshold(int moistvalue)
   lcd.setCursor(0, 1);
   lcd.print("Current Moist : ");
   lcd.print(moistvalue);
-  lcd.print("    ");
+  lcd.print(" %");
   lcd.setCursor(0, 2);
-  lcd.print("Threshold : ....... ");
+  lcd.print("Threshold : .......");
 }
 
 void display_set_timer()
@@ -272,17 +272,18 @@ void display_main_screen(int moist_value)
 
 
 float readKp4x4_set(int set_value)  {
-  while (true) {
-    mapped_value = map(sensor_value, low_moist, high_moist, 0, 100);
-    sensor_kelembapan();
+  if (set_value == thresholdValue) {
+    display_set_threshold(mapped_value);
+  }
+  else if (set_value == elapseValue) {
+    display_set_timer();
+  }
 
-    // hinder
-    if (set_value == thresholdValue) {
-          display_set_threshold(mapped_value);
-        }
-        else if (set_value == elapseValue) {
-          display_set_timer();
-        }
+
+  while (true) {
+    sensor_kelembapan();
+    mapped_value = map(sensor_value, low_moist, high_moist, 0, 100);
+
 
 
     // Read input from the keypad
@@ -304,12 +305,13 @@ float readKp4x4_set(int set_value)  {
           if (set_value == thresholdValue) {
             display_set_threshold(mapped_value);
             lcd.setCursor(12, 2);
+            lcd.print(inputString);
           }
           else if (set_value == elapseValue) {
             display_set_timer();
             lcd.setCursor(7, 2);
+            lcd.print(inputString);
           }
-          lcd.print(inputString);
         }
       }
       else {
@@ -324,6 +326,7 @@ float readKp4x4_set(int set_value)  {
           lcd.setCursor(7, 2);
         }
         lcd.print(inputString);
+        delay(500); // Add a short delay to ensure the inputted character is displayed
       }
       Serial.println(savedString);
     }
@@ -341,7 +344,7 @@ void listenmode0_low_moist() {
     lcd.setCursor(0, 0);
     lcd.print("Nilai Sensor : ");
     lcd.print(senval);
-    lcd.print("    ");
+    lcd.print("  ");
 
     lcd.setCursor(0, 1);
     lcd.print("tekan '#' untuk atur");
@@ -366,9 +369,9 @@ void listenmode0_high_moist() {
     previousMillis = millis();
 
     lcd.setCursor(0, 0);
-    lcd.print("in mode 1 - ");
+    lcd.print("Nilai Sensor : ");
     lcd.print(senval);
-    lcd.print("   ");
+    lcd.print("  ");
 
     lcd.setCursor(0, 1);
     lcd.print("tekan '#' untuk atur");
@@ -381,6 +384,7 @@ void listenmode0_high_moist() {
   if (customKeypad.getKey() == '#') {
     high_moist = senval;
     mode = 2;
+    lcd.clear();
   }
 
 }

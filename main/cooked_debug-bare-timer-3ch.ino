@@ -260,10 +260,12 @@ float readKp4x4_set_timer() {
                 }
             } 
             else {
-                // Otherwise, append the key to the input string
-                inputString += customKey;
-                lcd.setCursor(7, 2);
-                lcd.print(inputString);
+              // Otherwise, append the key to the input string
+              inputString += customKey;
+              lcd.clear(); // Clear the LCD
+              display_set_timer(sensor_value); // Display the timer again
+              lcd.setCursor(7, 2);
+              lcd.print(inputString);
             }
             Serial.println(savedString);
         }
